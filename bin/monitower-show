@@ -1,19 +1,30 @@
 #!/usr/bin/awk -f
 
+# Turn a stream of "t=1600297219 " into a bar graph ||||||| with green/red
+# to show availability of service.
+
+function state_color(st) {
+	return (st == "err") ? 31 : (st == "ok") ? 32 : 34
+}
+
 function flush_values(ctx)
 {
-	printf "\033[%d;1m|\033[m", (32 - (ctx["sum"] < ctx["num"]))
-	delete ctx["sum"]
-	delete ctx["num"]
+	printf "\033[%d;1m|\033[m", state_color(ctx["state"])
+	ctx["state"] = "ok"
 	ctx["progress"] += STEP
 }
 
-function add_value(time, value, ctx)
+function value_init(ctx)
 {
-	if (!(id in progress))
-		ctx["progress"] = START
+	ctx["progress"] = START
+	ctx["status"] = "ok"
+}
 
-	if (time > ctx["progress"] && ctx["num"] > 0)
+function value_add(time, value, ctx)
+{
+	#print "time="time, "step="STEP, "start="START, "progress="ctx["progress"], "value="value, "state="ctx["state"]
+
+	if (time > ctx["progress"])
 		flush_values(ctx)
 
 	# catch up with time by filling the gaps with spaces
@@ -22,18 +33,17 @@ function add_value(time, value, ctx)
 		ctx["progress"] += STEP
 	}
 
-	# accumulate the sum and num of entries now that we are at the tip
-	ctx["sum"] += (value == "ok")
-	ctx["num"] += 1
+	# order of priority is "err" > "ok"
+	ctx["state"] = (value == "err" ? "err" : ctx["state"])
 }
 
-function var_split(input, vars,
+function var_split(input, var,
 	key, fields, i)
 {
 	split(input, fields, " ")
 	for (i in fields) {
 		key = substr(fields[i], 1, index(fields[i], "=") - 1)
-		vars[key] = substr(fields[i], index(fields[i], "=") + 1)
+		var[key] = substr(fields[i], index(fields[i], "=") + 1)
 	}
 }
 
@@ -41,33 +51,27 @@ BEGIN {
 	cmd = "date +%s"
 	cmd | getline NOW
 	close(cmd)
-	NOW = NOW - NOW % STEP + STEP
 
 	STEP = ENVIRON["STEP"] ? ENVIRON["STEP"] : 600
 	COUNT = ENVIRON["COUNT"] ? ENVIRON["COUNT"] : 80
+	NOW = NOW - NOW % STEP + STEP
 	START = NOW - STEP * COUNT
 	START = START - START % STEP + STEP
 
-	NAME = ARGV[1]
-	sub("/*$", "", NAME)
-	sub(".*/", "", NAME)
+	value_init(ctx)
 
-	printf "  %-15s %s |", NAME, START
+	printf "  %s >", START
 }
 
-START <= $1 {
-	time = $1
-	value = $2
-	sub("[^ ]+ [^ ]+ ", "", $0)
+{ var_split($0, var) }
 
-	var_split($0, vars)
-	add_value(time, value, ctx)
-
-	split("", var)
+var["time"] >= START {
+	value_add(var["time"], var["state"], ctx)
 }
+
+{ split("", var) }
 
 END {
-	for (id in out)
-		add_value(NOW, "err", ctx)
-	printf "| %s\n", NOW
+	value_add(NOW, -1, ctx)
+	printf "< %s\n", NOW
 }

@@ -8,20 +8,26 @@
 # parsing and exploitation is made at every run, and this script is inexpensive enough
 # to be run from a /etc/crontab.
 
-check() { set -eu
+check() { set -u +e
+	local state now="$(date +%s)"
 	for x; do local "var_$x"; done
 
 	mkdir -p "$spool/$var_host/$var_name"
-	"check-$var_check" "$@"
-	echo "time=$now exit=$? $*" >>$spool/$var_host/$var_name/current
+
+	out=$("check-$var_check" "$@" 2>&1)
+	case $? in (0) state=ok ;; (*) state=err ;; esac
+
+	echo "time=$now state=$state" >>$spool/$var_host/$var_name/current
+
+	case $state in
+	(err) echo "$out" | monitower-event time="$now" state="$state" "$@" ;;
+	esac
 }
 
-now=$(date +%s)
 spool=/var/spool/monitower
 IFS='
 '
-
 sed -r 's,\\\\,\\s,g; s,\\",\\q,g' "$@" \
-| while IFS=' ' read name check line; do
-	check $(echo $line | xargs -n 1)
+| while IFS=' ' read line; do
+	check $(echo $line | xargs -n 1) &
 done

@@ -1,16 +1,16 @@
 #!/bin/sh -eu
 
-base=$(cd "${0%/*}/.."; pwd)
+spool=/var/spool/monitower
 
-for path in /var/spool/monitor/*/current; do
-	[ -f "$path" ] || continue
+if [ "$#" = 0 ]; then
+	for host in "$spool/"*; do
+		set -- "$@" "${host##*/}"
+	done
+fi
 
-	host=${path%/current}
-	host=${host##*/}
-
+for path in "$spool/"*"/"*"/current"; do
 	echo
-	echo "$host"
-
-	monitor-show "$path"
+	echo "${path#$spool/}"
+	monitower-show "$path"
 done
 echo
