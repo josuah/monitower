@@ -1,6 +1,3 @@
 #!/bin/sh -eu
 
-# Trigger an alert on monitoring event failure.
-
-printf ' [["%s"]]' "$@"
-printf '\n'
+exec logger -nc -d "$*" -t monitower -p alert
