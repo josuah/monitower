@@ -1,5 +1,5 @@
 #!/bin/sh -eu
 
-msgid=$(dd if=/dev/urandom bs=1 count=8 | od -An -tx | tr -cd 0-9a-fA-F)
+id=$(dd if=/dev/urandom bs=1 count=8 2>/dev/null | od -An -tx1 | tr -cd 0-9a-f)
 
-exec logger -nc -d "$*" -t monitower -p alert -m "$msgid"
+exec logger -nc -d "$*" -t monitower -p alert -m "$id"

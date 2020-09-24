@@ -24,6 +24,8 @@ check() { set -u +e
 	esac
 }
 
+[ $# -gt 0 ] || set -- /etc/monitower/check.d/*
+
 spool=/var/spool/monitower
 IFS='
 '
