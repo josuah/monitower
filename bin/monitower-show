@@ -22,8 +22,6 @@ function value_init(ctx)
 
 function value_add(time, value, ctx)
 {
-	#print "time="time, "step="STEP, "start="START, "progress="ctx["progress"], "value="value, "state="ctx["state"]
-
 	if (time > ctx["progress"])
 		flush_values(ctx)
 
@@ -52,7 +50,7 @@ BEGIN {
 	cmd | getline NOW
 	close(cmd)
 
-	STEP = ENVIRON["STEP"] ? ENVIRON["STEP"] : 600
+	STEP = ENVIRON["STEP"] ? ENVIRON["STEP"] : 60
 	COUNT = ENVIRON["COUNT"] ? ENVIRON["COUNT"] : 80
 	NOW = NOW - NOW % STEP + STEP
 	START = NOW - STEP * COUNT
