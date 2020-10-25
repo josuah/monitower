@@ -1,0 +1,18 @@
+#!/bin/sh -eu
+
+: ${MONITOWER_SPOOL:=/var/spool/monitower}
+
+if [ "$#" = 0 ]; then
+	for host in "$MONITOWER_SPOOL/"*; do
+		set -- "$@" "${host##*/}"
+	done
+fi
+
+for path in "$MONITOWER_SPOOL"/*/*; do
+	name=${path#$MONITOWER_SPOOL/}
+	name=${name%.log}
+	echo
+	echo "$name"
+	monitower-graph "$path"
+done
+echo

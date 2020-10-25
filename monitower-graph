@@ -1,15 +1,20 @@
 #!/usr/bin/awk -f
 
-# Turn a stream of "t=1600297219 " into a bar graph ||||||| with green/red
+# Turn a stream of "time=1600297219 state=(ok|err)" into a graph with green/red
 # to show availability of service.
 
-function state_color(st) {
-	return (st == "err") ? 31 : (st == "ok") ? 32 : 34
+function state_glyph(st) {
+	if (TTY) {
+		color = (st == "err") ? 31 : (st == "ok") ? 32 : 34
+		return "\033[1;" color "m|\033[m"
+	} else {
+		return (st == "err") ? "X" : (st == "ok") ? "|" : ":"
+	}
 }
 
-function flush_values(ctx)
+function value_flush(ctx)
 {
-	printf "\033[%d;1m|\033[m", state_color(ctx["state"])
+	printf "%s", state_glyph(ctx["state"])
 	ctx["state"] = "ok"
 	ctx["progress"] += STEP
 }
@@ -23,7 +28,7 @@ function value_init(ctx)
 function value_add(time, value, ctx)
 {
 	if (time > ctx["progress"])
-		flush_values(ctx)
+		value_flush(ctx)
 
 	# catch up with time by filling the gaps with spaces
 	while (ctx["progress"] < time) {
@@ -35,7 +40,7 @@ function value_add(time, value, ctx)
 	ctx["state"] = (value == "err" ? "err" : ctx["state"])
 }
 
-function var_split(input, var,
+function split_var(input, var,
 	key, fields, i)
 {
 	split(input, fields, " ")
@@ -56,18 +61,20 @@ BEGIN {
 	START = NOW - STEP * COUNT
 	START = START - START % STEP + STEP
 
+	TTY = system("exec tty >/dev/null 2>&1") == 0 && !("NOCOLOR" in ENVIRON)
+
 	value_init(ctx)
 
 	printf "  %s >", START
 }
 
-{ var_split($0, var) }
+{ split_var($0, var) }
 
 var["time"] >= START {
 	value_add(var["time"], var["state"], ctx)
 }
 
-{ split("", var) }
+{ split_var("", var) }
 
 END {
 	value_add(NOW, -1, ctx)

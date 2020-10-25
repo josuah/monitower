@@ -1,6 +1,0 @@
-#!/bin/sh -eu
-for x; do export "var_$x"; done
-
-: ${var_timeout:=3}
-
-exec dig +timeout="$var_timeout" -t "$var_type" "@$var_ip" "$var_dom"

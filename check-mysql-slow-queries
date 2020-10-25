@@ -1,11 +1,11 @@
 #!/bin/sh -eu
-for x; do export "var_$x"; done
+export x "$@"
 
-: ${var_time:=30}
+: ${time:=30}
 
 q="
 	SELECT ID FROM INFORMATION_SCHEMA.PROCESSLIST
-		WHERE Time > $var_time
+		WHERE Time > $time
 	AND	Command != 'Sleep'
 "
 
