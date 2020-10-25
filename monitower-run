@@ -35,3 +35,4 @@ IFS='
 sed -r 's,\\\\,\\s,g; s,\\",\\q,g' "$@" | while read line; do
 	check $(echo $line | xargs -n 1) &
 done
+wait
