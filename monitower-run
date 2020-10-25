@@ -12,7 +12,7 @@ check() { set -u +e
 
 	mkdir -p "$MONITOWER_SPOOL/$host"
 
-	"$cmd" "$@" >&2
+	"$cmd" "$@" >/dev/null 2>&1
 
 	case $? in
 	(0) state=ok level=debug ;;
@@ -20,19 +20,18 @@ check() { set -u +e
 	esac
 
 	logger -cs -t monitower -p "$MONITOWER_FACILITY.${level:-alert}" \
-	  time="$now" state="$state" "$@"
+	  time="$NOW" state="$state" "$@"
 
-	echo "time=$now state=$state" >>$MONITOWER_SPOOL/$host/$name.log
+	echo "time=$NOW state=$state $*" >>$MONITOWER_SPOOL/$host/$name.log
 }
 
 : ${MONITOWER_SPOOL:=/var/spool/monitower}
 : ${MONITOWER_FACILITY:=local7}
 
-now=$(date +%s)
+NOW=$(date +%s)
 IFS='
 '
-[ $# = 0 ] && set /etc/monitower.conf
-sed -r 's,\\\\,\\s,g; s,\\",\\q,g' "$@" | while read line; do
+while read line; do
 	check $(echo $line | xargs -n 1) &
-done
+done <${1:-/etc/monitower.conf}
 wait
