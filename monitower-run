@@ -7,31 +7,23 @@
 # script is inexpensive enough to be run from a /etc/crontab.
 #
 
-check() { set -u +e
-	local state "$@"
+check() { set -ue
+	local "$@"
 
 	mkdir -p "$MONITOWER_SPOOL/$host"
 
-	"$cmd" "$@" >/dev/null 2>&1
-
-	case $? in
-	(0) state=ok ;;
-	(*) state=err
-		logger -cs -p "$MONITOWER_FACILITY.${level:-alert}" \
-		  -t monitower time="$NOW" state="$state" "$@"
-		;;
-	esac
-
-	echo time="$NOW" state="$state" "$@" >>$MONITOWER_SPOOL/$host/$name.log
+	if "$cmd" "$@" >/dev/null 2>&1; then
+		echo time="$(date +%s)" state=ok "$@"
+	else
+		echo time="$(date +%s)" state=err "$@"
+		logger -cs -p "$MONITOWER_FACILITY.${level:-alert}" -t monitower "$@"
+	fi >>$MONITOWER_SPOOL/$host/$name.log
 }
 
 : ${MONITOWER_SPOOL:=/var/spool/monitower}
 : ${MONITOWER_FACILITY:=local7}
 
-NOW=$(date +%s)
-IFS='
-'
 while read line; do
-	check $(echo $line | xargs -n 1) &
+	check $line &
 done <${1:-/etc/monitower.conf}
 wait
