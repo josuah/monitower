@@ -8,21 +8,21 @@
 #
 
 check() { set -u +e
-	local state level "$@"
+	local state "$@"
 
 	mkdir -p "$MONITOWER_SPOOL/$host"
 
 	"$cmd" "$@" >/dev/null 2>&1
 
 	case $? in
-	(0) state=ok level=debug ;;
-	(*) state=err ;;
+	(0) state=ok ;;
+	(*) state=err
+		logger -cs -p "$MONITOWER_FACILITY.${level:-alert}" \
+		  -t monitower time="$NOW" state="$state" "$@"
+		;;
 	esac
 
-	logger -cs -t monitower -p "$MONITOWER_FACILITY.${level:-alert}" \
-	  time="$NOW" state="$state" "$@"
-
-	echo "time=$NOW state=$state $*" >>$MONITOWER_SPOOL/$host/$name.log
+	echo time="$NOW" state="$state" "$@" >>$MONITOWER_SPOOL/$host/$name.log
 }
 
 : ${MONITOWER_SPOOL:=/var/spool/monitower}
